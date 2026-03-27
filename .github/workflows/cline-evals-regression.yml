@@ -57,6 +57,12 @@ jobs:
         env:
           CLINE_API_KEY: ${{ secrets.CLINE_API_KEY }}
         run: |
+          if [ -z "$CLINE_API_KEY" ]; then
+            echo "::warning::CLINE_API_KEY is not configured, skipping smoke tests"
+            echo "## Smoke Tests Skipped" >> $GITHUB_STEP_SUMMARY
+            echo "CLINE_API_KEY secret is not configured in this repository." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
           cline auth -p cline -k "$CLINE_API_KEY" -m "anthropic/claude-sonnet-4.5"
           max_attempts=3
           for attempt in $(seq 1 $max_attempts); do
@@ -77,7 +83,12 @@ jobs:
 
       - name: Generate summary
         if: always()
-        run: cat evals/smoke-tests/results/latest/summary.md >> $GITHUB_STEP_SUMMARY
+        run: |
+          if [ -f evals/smoke-tests/results/latest/summary.md ]; then
+            cat evals/smoke-tests/results/latest/summary.md >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No summary file found" >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Upload results
         uses: actions/upload-artifact@v4
