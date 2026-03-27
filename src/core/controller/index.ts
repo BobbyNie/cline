@@ -111,6 +111,10 @@ export class Controller {
 	 * Fetches immediately and then every hour
 	 */
 	private startRemoteConfigTimer() {
+		// Intranet mode: skip remote config fetching entirely
+		if (ClineEnv.config().isIntranetMode) {
+			return
+		}
 		// Initial fetch
 		fetchRemoteConfig(this)
 		// Set up 1-hour interval

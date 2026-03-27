@@ -36,7 +36,7 @@ class ClineEndpoint {
 	private onPremiseConfig: EndpointsFileSchema | null = null
 	private environment: Environment = Environment.production
 	// Track if config came from bundled file (enterprise distribution)
-	private isBundled: boolean = false
+	private isBundled = false
 
 	private constructor() {
 		// Set environment at module load. Use override if provided.
@@ -294,7 +294,17 @@ class ClineEndpoint {
 	 * Returns the current environment configuration.
 	 * If running in on-premise mode, returns the custom endpoints.
 	 */
+	private get intranetFlags(): { isIntranetMode: boolean; telemetryDisabled: boolean } {
+		const isIntranetMode = process.env.CLINE_INTRANET_MODE === "true"
+		return {
+			isIntranetMode,
+			telemetryDisabled: isIntranetMode || process.env.CLINE_TELEMETRY_DISABLED === "true",
+		}
+	}
+
 	public getEnvironment(): EnvironmentConfig {
+		const { isIntranetMode, telemetryDisabled } = this.intranetFlags
+
 		// On-premise mode: use custom endpoints from file
 		if (this.onPremiseConfig) {
 			return {
@@ -302,6 +312,8 @@ class ClineEndpoint {
 				appBaseUrl: this.onPremiseConfig.appBaseUrl,
 				apiBaseUrl: this.onPremiseConfig.apiBaseUrl,
 				mcpBaseUrl: this.onPremiseConfig.mcpBaseUrl,
+				isIntranetMode,
+				telemetryDisabled,
 			}
 		}
 
@@ -313,6 +325,8 @@ class ClineEndpoint {
 					appBaseUrl: "https://staging-app.cline.bot",
 					apiBaseUrl: "https://core-api.staging.int.cline.bot",
 					mcpBaseUrl: "https://core-api.staging.int.cline.bot/v1/mcp",
+					isIntranetMode,
+					telemetryDisabled,
 				}
 			case Environment.local:
 				return {
@@ -320,6 +334,8 @@ class ClineEndpoint {
 					appBaseUrl: "http://localhost:3000",
 					apiBaseUrl: "http://localhost:7777",
 					mcpBaseUrl: "https://api.cline.bot/v1/mcp",
+					isIntranetMode,
+					telemetryDisabled,
 				}
 			default:
 				return {
@@ -327,6 +343,8 @@ class ClineEndpoint {
 					appBaseUrl: "https://app.cline.bot",
 					apiBaseUrl: "https://api.cline.bot",
 					mcpBaseUrl: "https://api.cline.bot/v1/mcp",
+					isIntranetMode,
+					telemetryDisabled,
 				}
 		}
 	}

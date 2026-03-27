@@ -266,6 +266,11 @@ async function ensureUserInOrgWithRemoteConfig(controller: Controller): Promise<
  * @param controller The controller instance
  */
 export async function fetchRemoteConfig(controller: Controller) {
+	// Intranet mode: skip remote config fetching entirely
+	if (ClineEnv.config().isIntranetMode) {
+		Logger.log("[RemoteConfig] Intranet mode enabled, skipping remote config fetch")
+		return
+	}
 	try {
 		await ensureUserInOrgWithRemoteConfig(controller)
 	} catch (error) {

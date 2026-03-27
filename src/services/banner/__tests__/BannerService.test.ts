@@ -87,6 +87,8 @@ describe("BannerService", () => {
 			appBaseUrl: "https://app.cline-mock.bot",
 			apiBaseUrl: "https://api.cline-mock.bot",
 			mcpBaseUrl: "https://api.cline-mock.bot/v1/mcp",
+			isIntranetMode: false,
+			telemetryDisabled: false,
 		})
 
 		const authService = AuthService.getInstance()

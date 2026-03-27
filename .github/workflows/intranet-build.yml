@@ -1,0 +1,180 @@
+name: Intranet Build and Release
+
+on:
+    push:
+        branches:
+            - main
+            - develop
+        tags:
+            - "intranet-v*"
+    pull_request:
+        branches:
+            - main
+            - develop
+    workflow_dispatch:
+        inputs:
+            release-type:
+                description: "Choose release type"
+                required: false
+                default: "release"
+                type: choice
+                options:
+                    - release
+                    - pre-release
+
+permissions:
+    contents: write
+    checks: write
+    pull-requests: write
+
+env:
+    CLINE_INTRANET_MODE: "true"
+
+jobs:
+    quality-checks:
+        runs-on: ubuntu-latest
+        name: Intranet Quality Checks
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js environment
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: "npm"
+                  cache-dependency-path: |
+                      package-lock.json
+                      webview-ui/package-lock.json
+
+            - name: Install root dependencies
+              run: npm ci
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Install webview-ui dependencies
+              run: cd webview-ui && npm ci
+
+            - name: Run Quality Checks
+              run: npm run ci:check-all
+
+    build-and-test:
+        needs: quality-checks
+        runs-on: ubuntu-latest
+        name: Intranet Build & Test
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js environment
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: "npm"
+                  cache-dependency-path: |
+                      package-lock.json
+                      webview-ui/package-lock.json
+
+            - name: Install root dependencies
+              run: npm ci
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Install webview-ui dependencies
+              run: cd webview-ui && npm ci
+
+            - name: Build Tests and Extension
+              run: npm run ci:build
+
+            - name: Unit Tests
+              run: npm run test:unit
+
+            - name: Extension Integration Tests
+              run: xvfb-run -a npm run test:coverage
+
+            - name: Webview Tests
+              run: cd webview-ui && npm run test:coverage
+
+            - name: Compile Extension
+              run: npm run compile
+
+            - name: Upload build artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: intranet-extension-build
+                  path: dist/
+
+    release:
+        needs: build-and-test
+        runs-on: ubuntu-latest
+        name: Intranet Release
+        if: startsWith(github.ref, 'refs/tags/intranet-v')
+        environment: publish
+
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  fetch-tags: true
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+
+            - name: Install root dependencies
+              run: npm install --include=optional
+
+            - name: Install webview-ui dependencies
+              run: cd webview-ui && npm install --include=optional
+
+            - name: Install Publishing Tools
+              run: npm install -g @vscode/vsce
+
+            - name: Get Version
+              id: get_version
+              env:
+                  TAG_REF: ${{ github.ref }}
+              run: |
+                  TAG="${TAG_REF#refs/tags/intranet-v}"
+                  echo "version=$TAG" >> "$GITHUB_OUTPUT"
+                  echo "Building intranet release version: $TAG"
+
+            - name: Package Extension
+              env:
+                  CLINE_INTRANET_MODE: "true"
+              run: |
+                  vsce package --allow-package-secrets sendgrid --out "cline-intranet-${{ steps.get_version.outputs.version }}.vsix"
+
+            - name: Get Changelog Entry
+              id: changelog
+              run: |
+                  CONTENT=$(awk '/^## \[/{if(found) exit; found=1; next} found{print}' CHANGELOG.md)
+                  echo "content<<EOF" >> "$GITHUB_OUTPUT"
+                  echo "$CONTENT" >> "$GITHUB_OUTPUT"
+                  echo "EOF" >> "$GITHUB_OUTPUT"
+
+            - name: Create GitHub Release
+              uses: softprops/action-gh-release@v1
+              with:
+                  tag_name: ${{ github.ref_name }}
+                  files: "cline-intranet-*.vsix"
+                  body: |
+                      ## Intranet Mode Release
+
+                      This is a special build with intranet mode enabled by default.
+
+                      ### Features
+                      - PostHog analytics disabled
+                      - Remote config fetching disabled
+                      - Auth token refresh network requests skipped
+                      - All non-essential network requests bypassed for intranet environments
+
+                      ### How to install
+                      1. Download the `.vsix` file below
+                      2. In VS Code, run `Extensions: Install from VSIX...`
+                      3. Select the downloaded file
+
+                      ${{ steps.changelog.outputs.content }}
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
