@@ -44,7 +44,10 @@ jobs:
       - name: Build and install CLI
         run: |
           npm run protos
-          cd cli && npm install && npm run build && npm install -g .
+          # Temporarily remove workspaces to avoid ENOWORKSPACES error with npm install -g
+          node -e "const p=require('./package.json'); delete p.workspaces; require('fs').writeFileSync('package.json', JSON.stringify(p, null, '\t') + '\n')"
+          cd cli && npm install && npm run build
+          npm install -g --install-links .
           echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
 
       - name: Verify CLI
