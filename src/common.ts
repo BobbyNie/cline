@@ -54,9 +54,12 @@ export async function initialize(storageContext: StorageContext): Promise<Webvie
 
 	// =============== External services ===============
 	await ErrorService.initialize()
-	// Initialize PostHog client provider (skip in self-hosted mode)
-	if (!ClineEndpoint.isSelfHosted()) {
-		PostHogClientProvider.getInstance()
+	// Initialize PostHog client provider (skip in self-hosted mode OR intranet mode)
+	{
+		const { ClineEnv } = await import("./config")
+		if (!ClineEndpoint.isSelfHosted() && !ClineEnv.config().isIntranetMode) {
+			PostHogClientProvider.getInstance()
+		}
 	}
 
 	// =============== Webview services ===============

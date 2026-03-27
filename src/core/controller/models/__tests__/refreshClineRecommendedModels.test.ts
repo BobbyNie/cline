@@ -45,6 +45,8 @@ describe("refreshClineRecommendedModels", () => {
 			appBaseUrl: "https://app.cline-mock.bot",
 			apiBaseUrl: "https://api.cline-mock.bot",
 			mcpBaseUrl: "https://api.cline-mock.bot/v1/mcp",
+			isIntranetMode: false,
+			telemetryDisabled: false,
 		})
 		sandbox.stub(disk, "ensureCacheDirectoryExists").resolves("/tmp")
 		sandbox.stub(fs, "writeFile").resolves()
@@ -87,6 +89,8 @@ describe("refreshClineRecommendedModels", () => {
 			appBaseUrl: "https://app.cline-mock.bot",
 			apiBaseUrl: "https://api.cline-mock.bot",
 			mcpBaseUrl: "https://api.cline-mock.bot/v1/mcp",
+			isIntranetMode: false,
+			telemetryDisabled: false,
 		})
 		sandbox.stub(disk, "ensureCacheDirectoryExists").resolves("/tmp")
 		sandbox.stub(fs, "writeFile").resolves()

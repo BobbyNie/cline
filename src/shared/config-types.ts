@@ -15,4 +15,6 @@ export interface EnvironmentConfig {
 	appBaseUrl: string
 	apiBaseUrl: string
 	mcpBaseUrl: string
+	isIntranetMode: boolean
+	telemetryDisabled: boolean
 }

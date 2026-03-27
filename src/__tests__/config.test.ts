@@ -21,9 +21,7 @@ describe("ClineEndpoint configuration", () => {
 
 		// Stub os.homedir to return our temp directory
 		originalHomedir = os.homedir
-		sandbox
-			.stub(os, "homedir")
-			.returns(tempDir)
+		sandbox.stub(os, "homedir").returns(tempDir)
 
 		// Reset the singleton state using internal method
 		;(ClineEndpoint as any)._instance = null
@@ -688,6 +686,93 @@ describe("ClineEndpoint configuration", () => {
 				error.should.be.instanceof(ClineConfigurationError)
 				error.message.should.containEql("Missing required field")
 				error.message.should.containEql(path.join(bundledDir, "endpoints.json"))
+			}
+		})
+	})
+
+	describe("intranet mode", () => {
+		it("should enable intranet mode when CLINE_INTRANET_MODE is true", async () => {
+			// Save original env
+			const originalMode = process.env.CLINE_INTRANET_MODE
+
+			try {
+				process.env.CLINE_INTRANET_MODE = "true"
+
+				await ClineEndpoint.initialize(tempDir)
+				const config = ClineEndpoint.config
+
+				config.should.have.property("isIntranetMode", true)
+				config.should.have.property("telemetryDisabled", true)
+			} finally {
+				if (originalMode !== undefined) {
+					process.env.CLINE_INTRANET_MODE = originalMode
+				} else {
+					delete process.env.CLINE_INTRANET_MODE
+				}
+			}
+		})
+
+		it("should disable intranet mode by default", async () => {
+			// Ensure CLINE_INTRANET_MODE is not set
+			delete process.env.CLINE_INTRANET_MODE
+
+			await ClineEndpoint.initialize(tempDir)
+			const config = ClineEndpoint.config
+
+			config.should.have.property("isIntranetMode", false)
+			config.should.have.property("telemetryDisabled", false)
+		})
+
+		it("should disable telemetry when CLINE_INTRANET_MODE is true", async () => {
+			const originalMode = process.env.CLINE_INTRANET_MODE
+			const originalTelemetry = process.env.CLINE_TELEMETRY_DISABLED
+
+			try {
+				process.env.CLINE_INTRANET_MODE = "true"
+				delete process.env.CLINE_TELEMETRY_DISABLED
+
+				await ClineEndpoint.initialize(tempDir)
+				const config = ClineEndpoint.config
+
+				config.should.have.property("telemetryDisabled", true)
+			} finally {
+				if (originalMode !== undefined) {
+					process.env.CLINE_INTRANET_MODE = originalMode
+				} else {
+					delete process.env.CLINE_INTRANET_MODE
+				}
+				if (originalTelemetry !== undefined) {
+					process.env.CLINE_TELEMETRY_DISABLED = originalTelemetry
+				} else {
+					delete process.env.CLINE_TELEMETRY_DISABLED
+				}
+			}
+		})
+
+		it("should disable telemetry when CLINE_TELEMETRY_DISABLED is true", async () => {
+			const originalTelemetry = process.env.CLINE_TELEMETRY_DISABLED
+			const originalMode = process.env.CLINE_INTRANET_MODE
+
+			try {
+				process.env.CLINE_TELEMETRY_DISABLED = "true"
+				delete process.env.CLINE_INTRANET_MODE
+
+				await ClineEndpoint.initialize(tempDir)
+				const config = ClineEndpoint.config
+
+				config.should.have.property("telemetryDisabled", true)
+				config.should.have.property("isIntranetMode", false)
+			} finally {
+				if (originalTelemetry !== undefined) {
+					process.env.CLINE_TELEMETRY_DISABLED = originalTelemetry
+				} else {
+					delete process.env.CLINE_TELEMETRY_DISABLED
+				}
+				if (originalMode !== undefined) {
+					process.env.CLINE_INTRANET_MODE = originalMode
+				} else {
+					delete process.env.CLINE_INTRANET_MODE
+				}
 			}
 		})
 	})
