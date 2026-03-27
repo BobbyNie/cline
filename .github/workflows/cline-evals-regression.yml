@@ -44,7 +44,7 @@ jobs:
       - name: Build and install CLI
         run: |
           npm run protos
-          cd cli && npm install && npm run build && npm link
+          cd cli && npm install && npm run build && npm install -g .
           echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
 
       - name: Verify CLI
