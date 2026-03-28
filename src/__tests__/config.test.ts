@@ -691,8 +691,38 @@ describe("ClineEndpoint configuration", () => {
 	})
 
 	describe("intranet mode", () => {
+		it("should enable intranet mode by default", async () => {
+			// Ensure CLINE_INTRANET_MODE is not set — default is now true
+			delete process.env.CLINE_INTRANET_MODE
+
+			await ClineEndpoint.initialize(tempDir)
+			const config = ClineEndpoint.config
+
+			config.should.have.property("isIntranetMode", true)
+			config.should.have.property("telemetryDisabled", true)
+		})
+
+		it("should disable intranet mode when CLINE_INTRANET_MODE is false", async () => {
+			const originalMode = process.env.CLINE_INTRANET_MODE
+
+			try {
+				process.env.CLINE_INTRANET_MODE = "false"
+
+				await ClineEndpoint.initialize(tempDir)
+				const config = ClineEndpoint.config
+
+				config.should.have.property("isIntranetMode", false)
+				config.should.have.property("telemetryDisabled", false)
+			} finally {
+				if (originalMode !== undefined) {
+					process.env.CLINE_INTRANET_MODE = originalMode
+				} else {
+					delete process.env.CLINE_INTRANET_MODE
+				}
+			}
+		})
+
 		it("should enable intranet mode when CLINE_INTRANET_MODE is true", async () => {
-			// Save original env
 			const originalMode = process.env.CLINE_INTRANET_MODE
 
 			try {
@@ -712,56 +742,19 @@ describe("ClineEndpoint configuration", () => {
 			}
 		})
 
-		it("should disable intranet mode by default", async () => {
-			// Ensure CLINE_INTRANET_MODE is not set
-			delete process.env.CLINE_INTRANET_MODE
-
-			await ClineEndpoint.initialize(tempDir)
-			const config = ClineEndpoint.config
-
-			config.should.have.property("isIntranetMode", false)
-			config.should.have.property("telemetryDisabled", false)
-		})
-
-		it("should disable telemetry when CLINE_INTRANET_MODE is true", async () => {
-			const originalMode = process.env.CLINE_INTRANET_MODE
-			const originalTelemetry = process.env.CLINE_TELEMETRY_DISABLED
-
-			try {
-				process.env.CLINE_INTRANET_MODE = "true"
-				delete process.env.CLINE_TELEMETRY_DISABLED
-
-				await ClineEndpoint.initialize(tempDir)
-				const config = ClineEndpoint.config
-
-				config.should.have.property("telemetryDisabled", true)
-			} finally {
-				if (originalMode !== undefined) {
-					process.env.CLINE_INTRANET_MODE = originalMode
-				} else {
-					delete process.env.CLINE_INTRANET_MODE
-				}
-				if (originalTelemetry !== undefined) {
-					process.env.CLINE_TELEMETRY_DISABLED = originalTelemetry
-				} else {
-					delete process.env.CLINE_TELEMETRY_DISABLED
-				}
-			}
-		})
-
-		it("should disable telemetry when CLINE_TELEMETRY_DISABLED is true", async () => {
+		it("should disable telemetry when CLINE_TELEMETRY_DISABLED is true (even with intranet mode on)", async () => {
 			const originalTelemetry = process.env.CLINE_TELEMETRY_DISABLED
 			const originalMode = process.env.CLINE_INTRANET_MODE
 
 			try {
 				process.env.CLINE_TELEMETRY_DISABLED = "true"
+				// Default intranet mode is on, but test explicit telemetry disable
 				delete process.env.CLINE_INTRANET_MODE
 
 				await ClineEndpoint.initialize(tempDir)
 				const config = ClineEndpoint.config
 
 				config.should.have.property("telemetryDisabled", true)
-				config.should.have.property("isIntranetMode", false)
 			} finally {
 				if (originalTelemetry !== undefined) {
 					process.env.CLINE_TELEMETRY_DISABLED = originalTelemetry
@@ -772,6 +765,33 @@ describe("ClineEndpoint configuration", () => {
 					process.env.CLINE_INTRANET_MODE = originalMode
 				} else {
 					delete process.env.CLINE_INTRANET_MODE
+				}
+			}
+		})
+
+		it("should allow telemetry when intranet mode is disabled and no telemetry override", async () => {
+			const originalMode = process.env.CLINE_INTRANET_MODE
+			const originalTelemetry = process.env.CLINE_TELEMETRY_DISABLED
+
+			try {
+				process.env.CLINE_INTRANET_MODE = "false"
+				delete process.env.CLINE_TELEMETRY_DISABLED
+
+				await ClineEndpoint.initialize(tempDir)
+				const config = ClineEndpoint.config
+
+				config.should.have.property("isIntranetMode", false)
+				config.should.have.property("telemetryDisabled", false)
+			} finally {
+				if (originalMode !== undefined) {
+					process.env.CLINE_INTRANET_MODE = originalMode
+				} else {
+					delete process.env.CLINE_INTRANET_MODE
+				}
+				if (originalTelemetry !== undefined) {
+					process.env.CLINE_TELEMETRY_DISABLED = originalTelemetry
+				} else {
+					delete process.env.CLINE_TELEMETRY_DISABLED
 				}
 			}
 		})

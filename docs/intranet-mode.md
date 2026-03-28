@@ -2,16 +2,20 @@
 
 ## Overview
 
-When using Cline in an intranet environment, the first conversation may experience long waits due to network requests to external services (PostHog analytics, remote config, auth token refresh, etc.). Intranet mode disables these network requests to improve user experience.
+This fork (`BobbyNie/cline`) defaults to **intranet mode**, which disables non-essential network requests (PostHog analytics, remote config, auth token refresh, MCP marketplace, etc.) to work seamlessly in air-gapped or restricted network environments.
 
-## Enabling Intranet Mode
+## Default Behavior
 
-### Method 1: Environment Variable (Recommended)
+**Intranet mode is enabled by default.** No configuration is needed — the extension automatically operates in intranet mode.
 
-Set the environment variable before launching VS Code:
+## Disabling Intranet Mode (for Development/Testing)
+
+If you need external network features (e.g., for upstream development or testing):
+
+### Method 1: Environment Variable
 
 ```bash
-export CLINE_INTRANET_MODE=true
+export CLINE_INTRANET_MODE=false
 code
 ```
 
@@ -22,27 +26,16 @@ Add to your VS Code `settings.json`:
 ```json
 {
   "terminal.integrated.env.osx": {
-    "CLINE_INTRANET_MODE": "true"
+    "CLINE_INTRANET_MODE": "false"
   },
   "terminal.integrated.env.linux": {
-    "CLINE_INTRANET_MODE": "true"
+    "CLINE_INTRANET_MODE": "false"
   },
   "terminal.integrated.env.windows": {
-    "CLINE_INTRANET_MODE": "true"
+    "CLINE_INTRANET_MODE": "false"
   }
 }
 ```
-
-### Method 3: Pre-built Intranet Release
-
-Download the intranet release `.vsix` from [GitHub Releases](https://github.com/BobbyNie/cline/releases) (tagged `intranet-v*`). This build has `CLINE_INTRANET_MODE=true` embedded in the CI environment, so the extension automatically operates in intranet mode.
-
-To install:
-1. Download `cline-intranet-*.vsix`
-2. In VS Code, run `Extensions: Install from VSIX...`
-3. Select the downloaded file
-
-**Note:** `CLINE_INTRANET_MODE` is a **runtime** environment variable, not a build-time flag. For Method 1 and 2, the env var is read each time the extension starts. The pre-built release (Method 3) works because the CI workflow sets the env var at package time.
 
 ## What Intranet Mode Disables
 
@@ -55,7 +48,7 @@ When intranet mode is enabled, the following external network requests are skipp
 | **Remote Config Timer** | The 1-hour polling timer for remote config | `src/core/controller/index.ts` |
 | **Banner Service** | External banner API fetches | `src/core/controller/index.ts` |
 | **Auth Token Refresh** | Cline account auth token refresh | `src/core/controller/index.ts` |
-| **MCP Marketplace** | External marketplace API fetches | `src/core/controller/index.ts` (on-demand) |
+| **MCP Marketplace** | External marketplace API fetches | `src/core/controller/index.ts` |
 
 ## What Still Works
 
@@ -75,6 +68,17 @@ To verify intranet mode is enabled:
 1. Open VS Code Developer Tools (`Help > Toggle Developer Tools`)
 2. Look for `[RemoteConfig] Intranet mode enabled, skipping remote config fetch` in the console
 3. If you see this message, intranet mode is active
+
+## Pre-built Intranet Release
+
+Download the intranet release `.vsix` from [GitHub Releases](https://github.com/BobbyNie/cline/releases) (tagged `intranet-v*`).
+
+To install:
+1. Download `cline-intranet-*.vsix`
+2. In VS Code, run `Extensions: Install from VSIX...`
+3. Select the downloaded file
+
+**Note:** The pre-built release already defaults to intranet mode. No additional configuration needed.
 
 ## Related Configuration
 
@@ -97,25 +101,28 @@ export HTTPS_PROXY=http://your-proxy:port
 
 ## Environment Variables Reference
 
-| Variable | Value | Description |
-|----------|-------|-------------|
-| `CLINE_INTRANET_MODE` | `true` | Enable intranet mode, disables all non-essential network requests |
-| `CLINE_TELEMETRY_DISABLED` | `true` | Disable telemetry only, other network features remain active |
-| `HTTP_PROXY` | `http://proxy:port` | HTTP proxy address |
-| `HTTPS_PROXY` | `http://proxy:port` | HTTPS proxy address |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CLINE_INTRANET_MODE` | `true` (default) | Set to `"false"` to disable intranet mode |
+| `CLINE_TELEMETRY_DISABLED` | `true` (when intranet mode on) | Set to `"true"` to disable telemetry only |
+| `HTTP_PROXY` | — | HTTP proxy address |
+| `HTTPS_PROXY` | — | HTTPS proxy address |
 
 ## Implementation Details
 
 The intranet mode check flows through the configuration system:
 
 1. `process.env.CLINE_INTRANET_MODE` is read by `ClineEnv.getEnvironment()` in `src/config.ts`
+   - Default: `true` (intranet mode enabled)
+   - Only `process.env.CLINE_INTRANET_MODE === "false"` disables intranet mode
 2. The result is stored in `EnvironmentConfig.isIntranetMode` and `EnvironmentConfig.telemetryDisabled`
 3. Each network-touching module checks `ClineEnv.config().isIntranetMode` and returns early if true
 
-### Key Files Modified
+### Key Files
 
-- `src/shared/config-types.ts` - Added `isIntranetMode` and `telemetryDisabled` to `EnvironmentConfig`
-- `src/config.ts` - Added `intranetFlags` getter, updated all `getEnvironment()` return paths
+- `src/config.ts` - `intranetFlags` getter with default-to-true logic
 - `src/common.ts` - Skip PostHog init in intranet mode
 - `src/core/controller/index.ts` - Skip BannerService, auth token refresh, remote config timer, MCP marketplace
 - `src/core/storage/remote-config/fetch.ts` - Skip remote config fetch
+- `.github/workflows/intranet-build.yml` - Intranet CI + auto-release workflow
+- `.github/workflows/test.yml` - Upstream tests (sets `CLINE_INTRANET_MODE=false`)

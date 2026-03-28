@@ -20,6 +20,8 @@ jobs:
     quality-checks:
         runs-on: ubuntu-latest
         name: Quality Checks
+        env:
+            CLINE_INTRANET_MODE: "false"
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -52,6 +54,8 @@ jobs:
                 os: [ubuntu-latest, windows-latest]
         runs-on: ${{ matrix.os }}
         name: ${{ matrix.os == 'ubuntu-latest' && 'test' || format('test ({0})', matrix.os) }}
+        env:
+            CLINE_INTRANET_MODE: "false"
         defaults:
             run:
                 shell: bash
@@ -149,6 +153,8 @@ jobs:
     test-platform-integration:
         needs: quality-checks
         runs-on: ubuntu-latest
+        env:
+            CLINE_INTRANET_MODE: "false"
         steps:
             - name: Checkout code
               uses: actions/checkout@v4

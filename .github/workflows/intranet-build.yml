@@ -26,9 +26,6 @@ permissions:
     checks: write
     pull-requests: write
 
-env:
-    CLINE_INTRANET_MODE: "true"
-
 jobs:
     quality-checks:
         runs-on: ubuntu-latest
@@ -201,9 +198,9 @@ jobs:
                   body: |
                       ## Intranet Mode Release `${{ steps.version.outputs.tag }}`
 
-                      This is a special build with intranet mode enabled by default (`CLINE_INTRANET_MODE=true`).
+                      Intranet mode is **enabled by default** in this fork — no configuration needed.
 
-                      ### Disabled Network Features
+                      ### Disabled Network Features (by default)
                       - **PostHog Analytics**: Telemetry and analytics initialization skipped
                       - **Remote Configuration**: Periodic config fetching and 1-hour polling timer disabled
                       - **Banner Service**: External banner API fetches skipped
@@ -222,10 +219,10 @@ jobs:
                       2. In VS Code, run `Extensions: Install from VSIX...`
                       3. Select the downloaded file
 
-                      ### Manual Activation (for non-release builds)
+                      ### Disable Intranet Mode (if needed)
                       Set environment variable before launching VS Code:
                       ```bash
-                      export CLINE_INTRANET_MODE=true
+                      export CLINE_INTRANET_MODE=false
                       code
                       ```
 

@@ -295,7 +295,8 @@ class ClineEndpoint {
 	 * If running in on-premise mode, returns the custom endpoints.
 	 */
 	private get intranetFlags(): { isIntranetMode: boolean; telemetryDisabled: boolean } {
-		const isIntranetMode = process.env.CLINE_INTRANET_MODE === "true"
+		// Default to intranet mode (true); explicitly set "false" to disable
+		const isIntranetMode = process.env.CLINE_INTRANET_MODE !== "false"
 		return {
 			isIntranetMode,
 			telemetryDisabled: isIntranetMode || process.env.CLINE_TELEMETRY_DISABLED === "true",

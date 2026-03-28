@@ -18,6 +18,7 @@ describe("Controller Marketplace Filtering", () => {
 	let stateManagerStub: sinon.SinonStub
 	let mockStateManager: any
 	let axiosGetStub: sinon.SinonStub
+	let originalIntranetMode: string | undefined
 	let hostProviderInitialized = false
 
 	// Initialize ClineEndpoint before tests run (required for ClineEnv.config() to work)
@@ -160,6 +161,10 @@ describe("Controller Marketplace Filtering", () => {
 			data: mockMarketplaceData,
 		})
 
+		// Disable intranet mode for marketplace tests (default is now true)
+		originalIntranetMode = process.env.CLINE_INTRANET_MODE
+		process.env.CLINE_INTRANET_MODE = "false"
+
 		// Create controller instance
 		controller = new Controller(mockContext)
 	})
@@ -167,6 +172,13 @@ describe("Controller Marketplace Filtering", () => {
 	afterEach(() => {
 		stateManagerStub.restore()
 		axiosGetStub.restore()
+
+		// Restore original CLINE_INTRANET_MODE
+		if (originalIntranetMode === undefined) {
+			delete process.env.CLINE_INTRANET_MODE
+		} else {
+			process.env.CLINE_INTRANET_MODE = originalIntranetMode
+		}
 
 		// Reset HostProvider if we initialized it
 		if (hostProviderInitialized) {

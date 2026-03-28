@@ -139,24 +139,16 @@ For example, when working with a local web server, you can use 'Restore Workspac
 
 ## Intranet / Air-Gapped Environments
 
-If you are using Cline in an intranet or air-gapped environment where external network access is restricted, you can enable **intranet mode** to disable non-essential network requests (telemetry, remote config, banner service, auth token refresh, etc.):
-
-```bash
-# Set before launching VS Code
-export CLINE_INTRANET_MODE=true
-code
-```
-
-Or add to VS Code `settings.json`:
-```json
-{
-  "terminal.integrated.env.osx": { "CLINE_INTRANET_MODE": "true" },
-  "terminal.integrated.env.linux": { "CLINE_INTRANET_MODE": "true" },
-  "terminal.integrated.env.windows": { "CLINE_INTRANET_MODE": "true" }
-}
-```
+This fork **defaults to intranet mode**, which disables non-essential network requests (telemetry, remote config, banner service, auth token refresh, MCP marketplace, etc.). No configuration is needed — it works out of the box in air-gapped environments.
 
 Pre-built intranet releases (`.vsix`) are available at [GitHub Releases](https://github.com/BobbyNie/cline/releases) (tagged `intranet-v*`). Download and install via `Extensions: Install from VSIX...`.
+
+If you need to disable intranet mode (e.g., for development with external APIs):
+
+```bash
+export CLINE_INTRANET_MODE=false
+code
+```
 
 See [docs/intranet-mode.md](docs/intranet-mode.md) for full documentation.
 
