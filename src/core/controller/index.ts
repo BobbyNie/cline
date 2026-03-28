@@ -645,10 +645,6 @@ export class Controller {
 
 	// MCP Marketplace
 	private async fetchMcpMarketplaceFromApi(): Promise<McpMarketplaceCatalog> {
-		// Intranet mode: marketplace API is not accessible
-		if (ClineEnv.config().isIntranetMode) {
-			throw new Error("[MCP Marketplace] Intranet mode enabled, skipping marketplace fetch")
-		}
 		const response = await axios.get(`${ClineEnv.config().mcpBaseUrl}/marketplace`, {
 			headers: {
 				"Content-Type": "application/json",
@@ -685,6 +681,11 @@ export class Controller {
 	}
 
 	async refreshMcpMarketplace(sendCatalogEvent: boolean): Promise<McpMarketplaceCatalog | undefined> {
+		// Intranet mode: marketplace API is not accessible
+		if (ClineEnv.config().isIntranetMode) {
+			Logger.log("[MCP Marketplace] Intranet mode enabled, skipping marketplace fetch")
+			return undefined
+		}
 		try {
 			const catalog = await this.fetchMcpMarketplaceFromApi()
 			if (catalog && sendCatalogEvent) {
