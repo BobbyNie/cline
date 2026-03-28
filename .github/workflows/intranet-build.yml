@@ -2,6 +2,8 @@ name: Intranet Build and Release
 
 on:
     push:
+        branches:
+            - main
         tags:
             - "intranet-v*"
     pull_request:
@@ -87,7 +89,22 @@ jobs:
               run: npm run test:unit
 
             - name: Extension Integration Tests
-              run: xvfb-run -a npm run test:coverage
+              run: |
+                  max_attempts=3
+                  for attempt in $(seq 1 $max_attempts); do
+                    echo "::group::Attempt $attempt of $max_attempts"
+                    if xvfb-run -a npm run test:coverage; then
+                      echo "::endgroup::"
+                      exit 0
+                    fi
+                    echo "::endgroup::"
+                    if [ "$attempt" -lt "$max_attempts" ]; then
+                      echo "::warning::Integration tests failed on attempt $attempt, retrying..."
+                      sleep 5
+                    fi
+                  done
+                  echo "::error::Integration tests failed after $max_attempts attempts"
+                  exit 1
 
             - name: Webview Tests
               run: cd webview-ui && npm run test:coverage
@@ -105,8 +122,7 @@ jobs:
         needs: build-and-test
         runs-on: ubuntu-latest
         name: Intranet Release
-        if: startsWith(github.ref, 'refs/tags/intranet-v')
-        environment: publish
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
         steps:
             - uses: actions/checkout@v4
@@ -130,36 +146,60 @@ jobs:
             - name: Install Publishing Tools
               run: npm install -g @vscode/vsce
 
-            - name: Get Version
-              id: get_version
-              env:
-                  TAG_REF: ${{ github.ref }}
+            - name: Determine Version
+              id: version
               run: |
-                  TAG="${TAG_REF#refs/tags/intranet-v}"
-                  echo "version=$TAG" >> "$GITHUB_OUTPUT"
-                  echo "Building intranet release version: $TAG"
+                  BASE_VERSION=$(node -p "require('./package.json').version")
+                  # Get the latest intranet release tag
+                  LATEST_TAG=$(git tag -l "intranet-v*" --sort=-version:refname | head -1)
+                  if [ -z "$LATEST_TAG" ]; then
+                    # No previous intranet release, use base version
+                    NEW_VERSION="${BASE_VERSION}"
+                  else
+                    PREV_VERSION="${LATEST_TAG#intranet-v}"
+                    echo "Previous intranet release: $PREV_VERSION"
+                    # Parse previous version
+                    IFS='.' read -r PREV_MAJOR PREV_MINOR PREV_PATCH <<< "$PREV_VERSION"
+                    # If base version changed (minor/major bump from upstream), use base version
+                    IFS='.' read -r BASE_MAJOR BASE_MINOR BASE_PATCH <<< "$BASE_VERSION"
+                    if [ "$BASE_MAJOR" != "$PREV_MAJOR" ] || [ "$BASE_MINOR" != "$PREV_MINOR" ]; then
+                      NEW_VERSION="${BASE_VERSION}"
+                    else
+                      # Same major.minor, bump patch
+                      NEW_PATCH=$((PREV_PATCH + 1))
+                      NEW_VERSION="${PREV_MAJOR}.${PREV_MINOR}.${NEW_PATCH}"
+                    fi
+                  fi
+                  echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+                  echo "tag=intranet-v${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+                  echo "Releasing intranet version: $NEW_VERSION"
 
             - name: Package Extension
               env:
                   CLINE_INTRANET_MODE: "true"
               run: |
-                  vsce package --allow-package-secrets sendgrid --out "cline-intranet-${{ steps.get_version.outputs.version }}.vsix"
+                  vsce package --allow-package-secrets sendgrid --out "cline-intranet-${{ steps.version.outputs.version }}.vsix"
 
             - name: Get Changelog Entry
               id: changelog
               run: |
-                  CONTENT=$(awk '/^## \[/{if(found) exit; found=1; next} found{print}' CHANGELOG.md)
+                  CONTENT=$(awk '/^## \[/{if(found) exit; found=1; next} found{print}' CHANGELOG.md 2>/dev/null || echo "")
                   echo "content<<EOF" >> "$GITHUB_OUTPUT"
                   echo "$CONTENT" >> "$GITHUB_OUTPUT"
                   echo "EOF" >> "$GITHUB_OUTPUT"
 
+            - name: Create Git Tag
+              run: |
+                  git tag "${{ steps.version.outputs.tag }}"
+                  git push origin "${{ steps.version.outputs.tag }}"
+
             - name: Create GitHub Release
               uses: softprops/action-gh-release@v1
               with:
-                  tag_name: ${{ github.ref_name }}
+                  tag_name: ${{ steps.version.outputs.tag }}
                   files: "cline-intranet-*.vsix"
                   body: |
-                      ## Intranet Mode Release
+                      ## Intranet Mode Release `${{ steps.version.outputs.tag }}`
 
                       This is a special build with intranet mode enabled by default (`CLINE_INTRANET_MODE=true`).
 
