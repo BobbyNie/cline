@@ -137,6 +137,31 @@ For example, when working with a local web server, you can use 'Restore Workspac
 
 <img width="2000" height="0" src="https://github.com/user-attachments/assets/ee14e6f7-20b8-4391-9091-8e8e25561929"><br>
 
+## Intranet / Air-Gapped Environments
+
+If you are using Cline in an intranet or air-gapped environment where external network access is restricted, you can enable **intranet mode** to disable non-essential network requests (telemetry, remote config, banner service, auth token refresh, etc.):
+
+```bash
+# Set before launching VS Code
+export CLINE_INTRANET_MODE=true
+code
+```
+
+Or add to VS Code `settings.json`:
+```json
+{
+  "terminal.integrated.env.osx": { "CLINE_INTRANET_MODE": "true" },
+  "terminal.integrated.env.linux": { "CLINE_INTRANET_MODE": "true" },
+  "terminal.integrated.env.windows": { "CLINE_INTRANET_MODE": "true" }
+}
+```
+
+Pre-built intranet releases (`.vsix`) are available at [GitHub Releases](https://github.com/BobbyNie/cline/releases) (tagged `intranet-v*`). Download and install via `Extensions: Install from VSIX...`.
+
+See [docs/intranet-mode.md](docs/intranet-mode.md) for full documentation.
+
+---
+
 ## Contributing
 
 To contribute to the project, start with our [Contributing Guide](CONTRIBUTING.md) to learn the basics. You can also join our [Discord](https://discord.gg/cline) to chat with other contributors in the `#contributors` channel. If you're looking for full-time work, check out our open positions on our [careers page](https://cline.bot/join-us)!

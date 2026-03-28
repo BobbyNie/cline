@@ -139,11 +139,15 @@ export class Controller {
 		this.authService = AuthService.getInstance(this)
 		this.ocaAuthService = OcaAuthService.initialize(this)
 		this.accountService = ClineAccountService.getInstance()
-		BannerService.initialize(this)
 
-		this.authService.restoreRefreshTokenAndRetrieveAuthInfo().then(() => {
-			this.startRemoteConfigTimer()
-		})
+		// Intranet mode: skip banner service init and auth token refresh to avoid external network calls
+		if (!ClineEnv.config().isIntranetMode) {
+			BannerService.initialize(this)
+
+			this.authService.restoreRefreshTokenAndRetrieveAuthInfo().then(() => {
+				this.startRemoteConfigTimer()
+			})
+		}
 
 		this.mcpHub = new McpHub(
 			() => ensureMcpServersDirectoryExists(),
@@ -641,6 +645,10 @@ export class Controller {
 
 	// MCP Marketplace
 	private async fetchMcpMarketplaceFromApi(): Promise<McpMarketplaceCatalog> {
+		// Intranet mode: marketplace API is not accessible
+		if (ClineEnv.config().isIntranetMode) {
+			throw new Error("[MCP Marketplace] Intranet mode enabled, skipping marketplace fetch")
+		}
 		const response = await axios.get(`${ClineEnv.config().mcpBaseUrl}/marketplace`, {
 			headers: {
 				"Content-Type": "application/json",

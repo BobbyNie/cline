@@ -2,9 +2,6 @@ name: Intranet Build and Release
 
 on:
     push:
-        branches:
-            - main
-            - develop
         tags:
             - "intranet-v*"
     pull_request:
@@ -123,10 +120,12 @@ jobs:
                   node-version: 22
 
             - name: Install root dependencies
-              run: npm install --include=optional
+              run: npm ci --include=optional
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Install webview-ui dependencies
-              run: cd webview-ui && npm install --include=optional
+              run: cd webview-ui && npm ci --include=optional
 
             - name: Install Publishing Tools
               run: npm install -g @vscode/vsce
@@ -162,18 +161,33 @@ jobs:
                   body: |
                       ## Intranet Mode Release
 
-                      This is a special build with intranet mode enabled by default.
+                      This is a special build with intranet mode enabled by default (`CLINE_INTRANET_MODE=true`).
 
-                      ### Features
-                      - PostHog analytics disabled
-                      - Remote config fetching disabled
-                      - Auth token refresh network requests skipped
-                      - All non-essential network requests bypassed for intranet environments
+                      ### Disabled Network Features
+                      - **PostHog Analytics**: Telemetry and analytics initialization skipped
+                      - **Remote Configuration**: Periodic config fetching and 1-hour polling timer disabled
+                      - **Banner Service**: External banner API fetches skipped
+                      - **Auth Token Refresh**: Cline account auth token refresh skipped (local models still work)
+                      - **MCP Marketplace**: External marketplace API fetches skipped
 
-                      ### How to install
+                      ### What Still Works
+                      - All AI conversation functionality (with local or intranet-accessible models)
+                      - File operations (read, write, edit)
+                      - MCP servers (local or intranet-accessible)
+                      - Command execution and terminal access
+                      - Code search, indexing, and task history
+
+                      ### How to Install
                       1. Download the `.vsix` file below
                       2. In VS Code, run `Extensions: Install from VSIX...`
                       3. Select the downloaded file
+
+                      ### Manual Activation (for non-release builds)
+                      Set environment variable before launching VS Code:
+                      ```bash
+                      export CLINE_INTRANET_MODE=true
+                      code
+                      ```
 
                       ${{ steps.changelog.outputs.content }}
               env:
