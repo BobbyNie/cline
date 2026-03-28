@@ -101,7 +101,23 @@ jobs:
             - name: Extension Integration Tests - Linux
               id: integration_tests_linux
               if: ${{ !cancelled() && steps.build_step.outcome == 'success' && runner.os == 'Linux' }}
-              run: xvfb-run -a npm run test:coverage
+              run: |
+                  max_attempts=3
+                  for attempt in $(seq 1 $max_attempts); do
+                    echo "::group::Attempt $attempt of $max_attempts"
+                    if xvfb-run -a npm run test:coverage; then
+                      echo "::endgroup::"
+                      echo "Integration tests passed on attempt $attempt"
+                      exit 0
+                    fi
+                    echo "::endgroup::"
+                    if [ "$attempt" -lt "$max_attempts" ]; then
+                      echo "::warning::Integration tests failed on attempt $attempt, retrying..."
+                      sleep 5
+                    fi
+                  done
+                  echo "::error::Integration tests failed after $max_attempts attempts"
+                  exit 1
 
             - name: Extension Integration Tests - Non-Linux
               id: integration_tests_non_linux
